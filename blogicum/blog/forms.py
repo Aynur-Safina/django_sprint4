@@ -1,8 +1,4 @@
 from django import forms
-# Импортируем класс ошибки валидации.
-from django.core.exceptions import ValidationError
-# Импорт функции для отправки почты.
-from django.core.mail import send_mail
 
 from .models import Post, Comment
 

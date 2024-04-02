@@ -19,27 +19,3 @@ class PublishedModel(models.Model):
 
     class Meta:
         abstract = True
-
-
-"""
-class PublishedQuerySet(models.QuerySet):
-    #Кастомный кверисет, который содержит
-    общие для всех моедлей параметры отображения постов на страницах.
-    
-
-    def apply_select_related(self):
-        return self.select_related(
-            'author', 'location', 'category'
-        )
-
-    def filter_published(self):
-        return self.filter(
-            pub_date__lt=timezone.now(),
-            is_published=True,
-            category__is_published=True,
-        )
-
-    def base_queryset(self):
-        # Mетод-шорткат для применения обоих методов за один
-        return self.apply_select_related().filter_published()
-"""

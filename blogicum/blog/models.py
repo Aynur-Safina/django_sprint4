@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth import get_user_model
 from blogicum.const import MAXLENGTH, VISIBLE_LENGTH
+from django.urls import reverse
 
 from core.models import PublishedModel
 
@@ -59,9 +60,10 @@ class Post(PublishedModel):
         ordering = ('-pub_date',)
         default_related_name = 'posts'
 
-   # def get_absolute_url(self):
-        # С помощью функции reverse() возвращаем URL объекта.
-        # return reverse('blog:post_detail', kwargs={'pk': self.pk})
+    def get_absolute_url(self):
+        return reverse('blog:post_detail',
+                       kwargs={'post_id': self.kwargs['post_id']}
+                       )
 
     def __str__(self):
         return self.title[:VISIBLE_LENGTH]
