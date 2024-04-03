@@ -2,11 +2,9 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.core.paginator import Paginator
 from django.db.models import Count
-from django.db.models.query import QuerySet
 from django.http import Http404
-from django.http.response import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect
-from django.urls import reverse_lazy, reverse
+from django.urls import reverse_lazy
 from django.utils import timezone
 from django.views.generic import (
     CreateView,
@@ -18,7 +16,6 @@ from django.views.generic import (
 
 from .forms import PostForm, CommentForm
 from .models import Post, Category, Comment
-from users.forms import MyUserCreationForm
 
 
 User = get_user_model()
@@ -33,28 +30,17 @@ class OnlyAuthorMixin(UserPassesTestMixin):
     def test_func(self):
         object = self.get_object()
         return object.author == self.request.user
-    
-    def handle_no_permission(self) -> HttpResponseRedirect:
-        object = self.get_object()
-        if not self.request.user.is_authenticated:
-            # Если пользователь не залогинен — отправляем его на страницу для входа:
-            return redirect('login')
-        if ('post_id' in self.request and 
-            self.object.author != self.request.user
-        ):
-            return redirect('blog:post_detail', post_id=object.id, permanent=True)
-        return super().handle_no_permission()
-"""
+
     def handle_no_permission(self):
         object = self.get_object()
-        if (self.raise_exception
-                or self.request.user.is_authenticated
-                ):
-            return redirect('blog:post_detail', post_id=object.id,permanent=True)
-"""
+        if not self.request.user.is_authenticated:
+            return redirect('login')
+        return redirect('blog:post_detail', post_id=object.id, permanent=True)
+
 
 class PostBaseMixin():
-    """Миксин, содержащий основные атрибуты классов для создания, редактирования и удаления публикации"""
+    """Миксин, содержащий основные атрибуты классов
+    для создания, редактирования и удаления публикации."""
 
     model = Post
     form_class = PostForm
@@ -62,7 +48,8 @@ class PostBaseMixin():
 
 
 class PostObjectMixin(PostBaseMixin):
-    """Миксин, дополнящий PostBaseMixin. Для редактирования и удаления публикации"""
+    """Миксин, дополнящий PostBaseMixin. 
+    Для редактирования и удаления публикации."""
 
     def get_object(self):
         return get_object_or_404(
@@ -71,6 +58,7 @@ class PostObjectMixin(PostBaseMixin):
 
 class BaseQueryset():
     """Миксин содержит основные фильтры для постов и комментов"""
+    
     def get_queryset(self):
         return Post.objects.prefetch_related(
             'author', 'location', 'category'
@@ -82,26 +70,31 @@ class BaseQueryset():
 
 
 class UserBaseMixin():
-    """Миксин с базовыми атрибутами для User"""
+    """Миксин с базовыми атрибутами для User."""
+
     model = User
     slug_url_kwarg = 'username'
     slug_field = 'username'
-    
     content_object_name = 'profile'
+
 
 class UrlProfileMixin():
     """Миксин переадресует на страницу Profile."""
+    
     def get_success_url(self):
         return reverse_lazy('blog:profile', kwargs={'username': self.request.user})
 
 
 class UrlPostDetailMixin():
+    """Миксин переадресует на страницу Post_Detail."""
+    
     def get_success_url(self):
         return reverse_lazy('blog:post_detail', kwargs={'post_id': self.kwargs['post_id']})
 
 
 class CommentBaseMixin(UrlPostDetailMixin):
-    """Миксин с базовыми атрибутами комментария"""
+    """Миксин с базовыми атрибутами комментария."""
+
     model = Comment
     template_name = 'blog/comment.html'
     form_class = CommentForm
@@ -113,6 +106,7 @@ class CommentBaseMixin(UrlPostDetailMixin):
 
 def get_page_obj(request,  paginated_obj):
     """Пагинация по 10 публикаций на странице."""
+    
     paginator = Paginator(paginated_obj, 10)
     page_number = request.GET.get('page')
     return paginator.get_page(page_number)
@@ -125,24 +119,23 @@ class PostsHomepageView(BaseQueryset, ListView):
     paginate_by = 10 
 
     def get_queryset(self):
-        # Применеям get_queryset родительского класса(PostBaseQueryset)+дополнительный фильтр.
+        # Применеям get_queryset родительского класса(BaseQueryset)+дополнительный фильтр.
         return super().get_queryset().annotate(
             comment_count=Count('comments')
             ).all()
 
 
-class UserProfileDetailView(
-    LoginRequiredMixin, 
-    UserBaseMixin, 
-    DetailView
-    ):
+class UserProfileDetailView(UserBaseMixin, DetailView):
     """Страница пользователя(Профиль)"""
 
     template_name = 'blog/profile.html'
 
+    def get_object(self, **kwarg):
+        return get_object_or_404(User, username=self.kwargs['username'])
+    
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        user = self.object
+        user = self.get_object()
         
         if self.request.user == user:
             posts = Post.objects.filter(
@@ -151,19 +144,19 @@ class UserProfileDetailView(
                 '-pub_date'
                 ).annotate(
                 comment_count=Count('comments')
-            ).all()
+                ).all()
+            
         else:
-            posts = Post.objects.prefetch_related(
-                'author', 'location', 'category'
-            ).filter(
-                pub_date__lt=timezone.now(),
-                is_published=True,
-                category__is_published=True,
-            ).order_by(
+            posts = BaseQueryset.get_queryset(
+                self
+                ).filter(
+                author=user
+                ).order_by(
                 '-pub_date'
                 ).annotate(
                 comment_count=Count('comments')
-            ).all()
+                ).all()
+            
         context['page_obj'] = get_page_obj(self.request, posts)
         context['profile'] = user
         return context
@@ -199,13 +192,17 @@ class PostDetailView(LoginRequiredMixin, PostObjectMixin, DetailView):
     template_name = 'blog/detail.html'
 
     def get_context_data(self, **kwargs):
+        post = self.get_object()
+        if post.author != self.request.user:
+            if not post.is_published:
+                raise Http404
         context = super().get_context_data(**kwargs)
         context['form'] = CommentForm()
         context['comments'] = (
             self.object.comments.prefetch_related('author')
         )
         return context
-
+       
 
 class PostCreateView(
     LoginRequiredMixin,
@@ -217,8 +214,6 @@ class PostCreateView(
 
     def form_valid(self, form):
         form.instance.author = self.request.user
-        #(((((((((((((((((())))))))))))))))))
-        files = self.request.FILES or None
         return super().form_valid(form)
     
 
@@ -230,29 +225,8 @@ class PostUpdateView(
     ):
     
     pass
+          
 
-    """Редактирование публикации""" 
-    '''
-    def handle_no_permission(self):
-        object = get_object_or_404(Post, post_id=self)
-        if not self.request.user.is_authenticated:
-        # Если пользователь не залогинен — отправляем его на страницу для входа:
-            return redirect('login')
-        if self.object.author != self.request.user:
-            return redirect('blog:post_detail', post_id=object.id, permanent=True)
-   '''
-    """
-  if 'post_id' in self.kwargs:
-            return redirect('blog:post_detail', post_id=object.id, permanent=True)    
-        raise Http404
-    
-    def handle_no_permission(self):
-        object = self.get_object()
-        if (self.raise_exception
-                or self.request.user.is_authenticated
-            ):
-            return redirect('blog:post_detail', post_id=object.id, permanent=True)
-"""
 class PostDeleteView(
     OnlyAuthorMixin,
     PostObjectMixin,
