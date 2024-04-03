@@ -7,6 +7,3 @@ from .models import MyUser
 admin.site.register(MyUser, UserAdmin)
 # Получаем модель пользователя:
 User = get_user_model()
-
-
-        
