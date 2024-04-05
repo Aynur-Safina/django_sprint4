@@ -1,13 +1,11 @@
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
-from django.urls import include, path
-
+from django.urls import include, path, re_path
+from django.views.static import serve
 from users.views import RegistrationCreateView
 
-
 urlpatterns = [
-    path('', include('blog.urls', namespace='blog')),
     path('admin/', admin.site.urls),
     path('pages/', include('pages.urls', namespace='pages')),
     path('auth/', include('django.contrib.auth.urls')),
@@ -16,7 +14,20 @@ urlpatterns = [
         RegistrationCreateView.as_view(),
         name='registration'
     ),
-] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    path('', include('blog.urls', namespace='blog')),
+]
+
+# Медиа от пользователя
+if settings.DEBUG:
+    urlpatterns += [
+        re_path(
+            r"^media/(?P<path>.*)$",
+            serve,
+            {
+                "document_root": settings.MEDIA_ROOT,
+            },
+        ),
+    ]
 
 handler404 = 'pages.views.page_not_found'
 

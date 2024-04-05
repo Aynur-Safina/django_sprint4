@@ -1,14 +1,12 @@
+from django.db.models import Count
 from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import UserPassesTestMixin
 from django.shortcuts import get_object_or_404, redirect
-from django.urls import reverse_lazy
+from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 
-from .forms import PostForm, CommentForm
-from .models import Post, Comment
-
-
-User = get_user_model()
+from .forms import CommentForm, PostForm
+from .models import Comment, Post, User
 
 
 class OnlyAuthorMixin(UserPassesTestMixin):
@@ -28,7 +26,7 @@ class OnlyAuthorMixin(UserPassesTestMixin):
         return redirect('blog:post_detail', post_id=object.id, permanent=True)
 
 
-class PostBaseMixin():
+class PostBaseMixin:
     """Миксин, содержащий основные атрибуты классов
     для создания, редактирования и удаления публикации.
     """
@@ -58,7 +56,10 @@ class BaseQuerysetMixin():
             pub_date__lt=timezone.now(),
             is_published=True,
             category__is_published=True,
-        ).order_by('-pub_date')
+        ).order_by('-pub_date'
+        ).annotate(
+            comment_count=Count('comments')
+        ).all()
 
 
 class UserBaseMixin():
@@ -74,7 +75,7 @@ class UrlProfileMixin():
     """Миксин переадресует на страницу Profile."""
 
     def get_success_url(self):
-        return reverse_lazy(
+        return reverse(
             'blog:profile',
             kwargs={'username': self.request.user}
         )
@@ -84,7 +85,7 @@ class UrlPostDetailMixin():
     """Миксин переадресует на страницу Post_Detail."""
 
     def get_success_url(self):
-        return reverse_lazy(
+        return reverse(
             'blog:post_detail',
             kwargs={'post_id': self.kwargs['post_id']}
         )

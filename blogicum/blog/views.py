@@ -1,57 +1,28 @@
-from django.contrib.auth import get_user_model
+from blogicum.const import PUBL_COUNT
+from core.utils import get_page_obj
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.core.paginator import Paginator
 from django.db.models import Count
 from django.http import Http404
 from django.shortcuts import get_object_or_404
-from django.views.generic import (
-    CreateView,
-    DetailView,
-    ListView,
-    UpdateView,
-    DeleteView
-)
+from django.views.generic import (CreateView, DeleteView, DetailView, ListView,
+                                  UpdateView)
 
 from .forms import CommentForm
-from .mixins import (
-    BaseQuerysetMixin,
-    CommentBaseMixin,
-    OnlyAuthorMixin,
-    PostObjectMixin,
-    PostBaseMixin,
-    UrlProfileMixin,
-    UrlPostDetailMixin,
-    UserBaseMixin
-)
-from .models import Post, Category
-
-
-User = get_user_model()
-
-
-def get_page_obj(request, paginated_obj):
-    """Пагинация по 10 публикаций на странице."""
-    paginator = Paginator(paginated_obj, 10)
-    page_number = request.GET.get('page')
-    return paginator.get_page(page_number)
+from .mixins import (BaseQuerysetMixin, CommentBaseMixin, OnlyAuthorMixin,
+                     PostBaseMixin, PostObjectMixin, UrlPostDetailMixin,
+                     UrlProfileMixin, UserBaseMixin)
+from .models import Category, Post, User
 
 
 class PostsHomepageView(BaseQuerysetMixin, ListView):
     """Главная страница."""
 
     template_name = 'blog/index.html'
-    paginate_by = 10
-
-    def get_queryset(self):
-        # Применеям get_queryset родительского класса
-        # (BaseQuerysetMixin)+дополнительный фильтр.
-        return super().get_queryset().annotate(
-            comment_count=Count('comments')
-        ).all()
+    paginate_by = PUBL_COUNT
 
 
 class UserProfileDetailView(UserBaseMixin, DetailView):
-    """Страница пользователя(Профиль)"""
+    """Страница пользователя(Профиль)."""
 
     template_name = 'blog/profile.html'
 
@@ -65,22 +36,13 @@ class UserProfileDetailView(UserBaseMixin, DetailView):
         if self.request.user == user:
             posts = Post.objects.filter(
                 author=user,
-            ).order_by(
-                '-pub_date'
-            ).annotate(
-                comment_count=Count('comments')
-            ).all()
-
+            )
         else:
             posts = BaseQuerysetMixin.get_queryset(
                 self
             ).filter(
                 author=user
-            ).order_by(
-                '-pub_date'
-            ).annotate(
-                comment_count=Count('comments')
-            ).all()
+            )
 
         context['page_obj'] = get_page_obj(self.request, posts)
         context['profile'] = user
@@ -92,7 +54,7 @@ class ProfileUpdateView(
     UrlProfileMixin,
     UpdateView
 ):
-    """Cтраница для редактирования профиля пользователя"""
+    """Cтраница для редактирования профиля пользователя."""
 
     fields = (
         'first_name',
@@ -102,6 +64,9 @@ class ProfileUpdateView(
     )
     template_name = 'blog/user.html'
 
+    # Без этого метода pytest падает с ошибкой 
+    # " AttributeError: Generic detail view ProfileUpdateView must be called with either an object pk or a slug in the URLconf." 
+    
     def get_object(self, queryset=None):
         return get_object_or_404(
             User,
