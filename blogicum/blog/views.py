@@ -4,6 +4,7 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.views.generic import (CreateView, DeleteView, DetailView, ListView,
                                   UpdateView)
+from django.http import Http404
 
 from .forms import CommentForm
 from .mixins import (BaseQuerysetMixin, CommentBaseMixin, OnlyAuthorMixin,
@@ -64,14 +65,17 @@ class ProfileUpdateView(UrlProfileMixin, UpdateView):
     )
     template_name = 'blog/user.html'
 
-    # Без этого метода страница не рендерится и pytest падает с ошибкой:
+    # Совсем без переопределения этого не удается сделать:
+    # метода страница не рендерится и pytest падает с ошибкой:
     # " AttributeError: Generic detail view ProfileUpdateView
     # must be called with either an object pk or a slug in the URLconf."
     # Насколько я понимаю, раз в url не передается
     # slug/pk для идентификации пользователя, то приходится
     # передавать его "вручную", через get_object()
-    def get_object(self, **kwarg):
-        return get_object_or_404(User, username=self.request.user)
+    def get_object(self, queryset=None):
+        if self.request.user.is_authenticated:
+            return self.request.user
+        raise Http404
 
 
 class PostDetailView(PostObjectMixin, DetailView):
