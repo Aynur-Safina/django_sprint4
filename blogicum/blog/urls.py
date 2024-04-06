@@ -1,10 +1,15 @@
-from django.urls import include, path
+from django.urls import path
 
 from . import views
 
 app_name = 'blog'
 
-#  Я исправила маршруты согласно замечанию. Все работает и прекрасно рендерится. Но pytest не пропускает c ошибкой: "AssertionError: Убедитесь, что опубликованный пост с опубликованной категорией и датой публикации в прошлом отображается на странице публикации."
+#  Я исправила маршруты согласно замечанию.
+# Все работает и прекрасно рендерится.
+# Но pytest не пропускает c ошибкой:
+# "AssertionError: Убедитесь, что опубликованный пост
+# с опубликованной категорией и датой публикации
+# в прошлом отображается на странице публикации."
 
 urlpatterns = [
     path('', views.PostsHomepageView.as_view(), name='index'),
@@ -104,7 +109,7 @@ posts_urls = [
         'posts/<int:post_id>/delete_comment/<int:comment_id>',
         views.CommentDeleteView.as_view(),
         name='delete_comment'
-    )  
+    )
 ]
 
 urlpatterns = [

@@ -3,7 +3,6 @@ from core.models import PublishedModel
 from django.contrib.auth import get_user_model
 from django.db import models
 from django.urls import reverse
-from django.utils.safestring import mark_safe
 
 User = get_user_model()
 
@@ -60,20 +59,20 @@ class Comment(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     author = models.ForeignKey(
-        User, 
+        User,
         on_delete=models.CASCADE
-        )
+    )
 
     class Meta:
         verbose_name = 'комментарии'
         verbose_name_plural = 'Комментарии'
         ordering = ('created_at',)
         default_related_name = 'comments'
-    
+
     def __str__(self):
         return (self.text[:VISIBLE_LENGTH], self.post,)
-        
-        
+
+
 class Post(PublishedModel):
     """Модель публикации."""
 
@@ -118,7 +117,6 @@ class Post(PublishedModel):
         upload_to='posts_images',
         blank=True
     )
-    
 
     class Meta:
         verbose_name = 'публикация'
@@ -128,9 +126,8 @@ class Post(PublishedModel):
 
     def __str__(self):
         return self.title[:VISIBLE_LENGTH]
-    
+
     def get_absolute_url(self):
         return reverse('blog:post_detail',
                        kwargs={'post_id': self.kwargs['post_id']}
                        )
-

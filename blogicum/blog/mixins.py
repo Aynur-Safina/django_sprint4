@@ -1,18 +1,28 @@
-from django.db.models import Count
-from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import UserPassesTestMixin
+from django.db.models import Count
 from django.shortcuts import get_object_or_404, redirect
-from django.urls import reverse, reverse_lazy
+from django.urls import reverse
 from django.utils import timezone
 
 from .forms import CommentForm, PostForm
-from .models import Comment, Post, User
+from .models import Comment, Post
 
 
 class OnlyAuthorMixin(UserPassesTestMixin):
-    """Миксин, который предоставляет доступ к редактированию
-    и удалению объектов только авторам — пользователям,
-    создавшим эти объекты.
+    """Класс-миксин ограничивает доступ к редактированию
+    и удалению объектов для  не-авторов.
+
+    Атрибуты:
+    __________
+    наследуются от UserPassesTestMixin.
+
+    Методы:
+    ________
+    переопределяет родительские методы:
+    - test_func - определяет, является ли текущий пользователь автором объекта
+    - handle_no_permission - перенаправляет на другие страницы
+    в случае возникновения исключения PermissionDenied.
+
     """
 
     def test_func(self):
@@ -29,17 +39,22 @@ class OnlyAuthorMixin(UserPassesTestMixin):
 class PostBaseMixin:
     """Миксин, содержащий основные атрибуты классов
     для создания, редактирования и удаления публикации.
+    Атрибуты:
+    __________
+    model - модель класса для публикаций
+    form_class - форма для публикаций
+    template_name - шаблон HTML
+    pk_url_kwarg - переопределение параметра pk
     """
 
     model = Post
     form_class = PostForm
     template_name = 'blog/create.html'
+    pk_url_kwarg = 'post_id'
 
 
 class PostObjectMixin(PostBaseMixin):
-    """Миксин, дополнящий PostBaseMixin.
-    Для редактирования и удаления публикации.
-    """
+    """Миксин, дополнящий PostBaseMixin."""
 
     def get_object(self):
         return get_object_or_404(
@@ -56,19 +71,11 @@ class BaseQuerysetMixin():
             pub_date__lt=timezone.now(),
             is_published=True,
             category__is_published=True,
-        ).order_by('-pub_date'
+        ).order_by(
+            '-pub_date'
         ).annotate(
             comment_count=Count('comments')
         ).all()
-
-
-class UserBaseMixin():
-    """Миксин с базовыми атрибутами для User."""
-
-    model = User
-    slug_url_kwarg = 'username'
-    slug_field = 'username'
-    content_object_name = 'profile'
 
 
 class UrlProfileMixin():

@@ -1,6 +1,5 @@
 from django.contrib import admin
 from django.contrib.auth.models import Group
-from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
 from .models import Category, Comment, Location, Post
@@ -18,18 +17,18 @@ admin.site.index_title = "Добро пожаловать в админку, д�
 class PostAdmin(admin.ModelAdmin):
     # Группировка полей при добавлении новой публикации через админ-панель
     fieldsets = (
-    ('Инфо', {
-        'fields': ('title', 'author', 'pub_date',),
-        'description': 'Общая информация'
-    }),
-    ('Категория', {
-        'fields': ('category',),
-    }),
-    ('Иллюстрация', {
-        'fields': ('get_image_tag',)
-    })
-    ) 
-    
+        ('Инфо', {
+            'fields': ('title', 'author', 'pub_date',),
+            'description': 'Общая информация'
+        }),
+        ('Категория', {
+            'fields': ('category',),
+        }),
+        ('Иллюстрация', {
+            'fields': ('get_image_tag',)
+        })
+    )
+
     list_display = (
         'title',
         'author',
@@ -38,34 +37,34 @@ class PostAdmin(admin.ModelAdmin):
         'is_published',
         'get_image_tag',
     )
-    
+
     # Поля, которые можно только читать(не редактировать)
     readonly_fields = ['get_image_tag']
-  
+
     search_fields = (
         'title',
         'author',
         'category',
     )
-    list_filter = ('is_published', 
+    list_filter = ('is_published',
                    'category')
-    
-    
+
     def get_image_tag(self, obj):
-        """Метод выводит миниатюру иллюстрации к посту в админ-панель(без него будет только ссылка на иллюстрацию).
+        """Метод выводит миниатюру иллюстрации к посту в
+        админ-панель(без него будет только ссылка на иллюстрацию).
         """
         if obj.image:
             return mark_safe(f'<img src="{obj.image.url}" width=50>')
-        
+
     get_image_tag.short_description = 'Иллюстрация к посту'
 
-    
+
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
     fieldsets = (
         ('Информация', {
             'fields': ('title', 'description',),
-            
+
         }),
         ('Статус категории', {
             'fields': ('slug', 'is_published',)
@@ -77,12 +76,12 @@ class CategoryAdmin(admin.ModelAdmin):
     )
     list_filter = ('is_published',)
     list_display = ('title',)
-    
+
 
 @admin.register(Location)
 class LocationAdmin(admin.ModelAdmin):
     filelds = ['name',
-               'is_published',]
+               'is_published', ]
     list_display = (
         'name',
         'is_published',
@@ -100,7 +99,7 @@ class CommentAdmin(admin.ModelAdmin):
         'post',
         'text',
         'author',
-        'created_at',   
+        'created_at',
     )
     search_fields = (
         'author',
@@ -108,5 +107,6 @@ class CommentAdmin(admin.ModelAdmin):
         'created_at',
     )
     list_display_links = ('text',)
-    
+
+
 admin.site.empty_value_display = 'Не задано'
