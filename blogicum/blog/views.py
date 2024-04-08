@@ -9,7 +9,7 @@ from blogicum.const import PUBL_COUNT
 
 from .forms import CommentForm
 from .mixins import (BaseQuerysetMixin, CommentBaseMixin, OnlyAuthorMixin,
-                     PostBaseMixin, PostObjectMixin, UrlPostDetailMixin,
+                     PostBaseMixin, UrlPostDetailMixin,
                      UrlProfileMixin)
 from .models import Category, Post, User
 
@@ -129,11 +129,15 @@ class PostUpdateView(
 
 class PostDeleteView(
     OnlyAuthorMixin,
-    PostObjectMixin,
+    PostBaseMixin,
     UrlProfileMixin,
     DeleteView
 ):
     """Удаление публикации"""
+
+    def get_object(self):
+        return get_object_or_404(
+            Post, pk=self.kwargs['post_id'])
 
     def get_context_data(self, **kwargs):
         # В шаблон передаем через context форму для удаления

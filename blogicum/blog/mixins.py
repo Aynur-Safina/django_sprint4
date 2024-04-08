@@ -52,14 +52,6 @@ class PostBaseMixin:
     pk_url_kwarg = 'post_id'
 
 
-class PostObjectMixin(PostBaseMixin):
-    """Миксин, дополнящий PostBaseMixin."""
-
-    def get_object(self):
-        return get_object_or_404(
-            Post, pk=self.kwargs['post_id'])
-
-
 class BaseQuerysetMixin:
     """Миксин содержит основные фильтры для постов и комментов."""
 
