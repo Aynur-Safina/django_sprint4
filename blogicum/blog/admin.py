@@ -39,7 +39,7 @@ class PostAdmin(admin.ModelAdmin):
     )
 
     # Поля, которые можно только читать(не редактировать)
-    readonly_fields = ['get_image_tag']
+    readonly_fields = ('get_image_tag',)
 
     search_fields = (
         'title',
@@ -49,14 +49,15 @@ class PostAdmin(admin.ModelAdmin):
     list_filter = ('is_published',
                    'category')
 
+    @admin.display(
+        description='Иллюстрация к посту',
+    )
     def get_image_tag(self, obj):
         """Метод выводит миниатюру иллюстрации к посту в
         админ-панель(без него будет только ссылка на иллюстрацию).
         """
         if obj.image:
             return mark_safe(f'<img src="{obj.image.url}" width=50>')
-
-    get_image_tag.short_description = 'Иллюстрация к посту'
 
 
 @admin.register(Category)

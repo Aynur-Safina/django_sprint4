@@ -9,8 +9,7 @@ from .models import Comment, Post
 
 
 class OnlyAuthorMixin(UserPassesTestMixin):
-    """Класс-миксин ограничивает доступ к редактированию
-    и удалению объектов для  не-авторов.
+    """Класс для ограничения доступа не-авторов.
 
     Атрибуты:
     __________
@@ -37,8 +36,8 @@ class OnlyAuthorMixin(UserPassesTestMixin):
 
 
 class PostBaseMixin:
-    """Миксин, содержащий основные атрибуты классов
-    для создания, редактирования и удаления публикации.
+    """Миксин для создания, редактирования и удаления публикации.
+
     Атрибуты:
     __________
     model - модель класса для публикаций
@@ -61,7 +60,7 @@ class PostObjectMixin(PostBaseMixin):
             Post, pk=self.kwargs['post_id'])
 
 
-class BaseQuerysetMixin():
+class BaseQuerysetMixin:
     """Миксин содержит основные фильтры для постов и комментов."""
 
     def get_queryset(self):

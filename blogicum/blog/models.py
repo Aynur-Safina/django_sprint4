@@ -1,8 +1,9 @@
-from blogicum.const import MAXLENGTH, VISIBLE_LENGTH
-from core.models import PublishedModel
 from django.contrib.auth import get_user_model
 from django.db import models
 from django.urls import reverse
+
+from blogicum.const import MAXLENGTH, VISIBLE_LENGTH
+from core.models import PublishedModel
 
 User = get_user_model()
 
@@ -51,28 +52,6 @@ class Location(PublishedModel):
         return self.name[:VISIBLE_LENGTH]
 
 
-class Comment(models.Model):
-    text = models.TextField('Комментарий')
-    post = models.ForeignKey(
-        'Post',
-        on_delete=models.CASCADE,
-    )
-    created_at = models.DateTimeField(auto_now_add=True)
-    author = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE
-    )
-
-    class Meta:
-        verbose_name = 'комментарии'
-        verbose_name_plural = 'Комментарии'
-        ordering = ('created_at',)
-        default_related_name = 'comments'
-
-    def __str__(self):
-        return (self.text[:VISIBLE_LENGTH], self.post,)
-
-
 class Post(PublishedModel):
     """Модель публикации."""
 
@@ -108,8 +87,7 @@ class Post(PublishedModel):
         Category,
         on_delete=models.SET_NULL,
         null=True,
-        verbose_name='Категория',
-        related_name='posts'
+        verbose_name='Категория'
     )
 
     image = models.ImageField(
@@ -131,3 +109,30 @@ class Post(PublishedModel):
         return reverse('blog:post_detail',
                        kwargs={'post_id': self.kwargs['post_id']}
                        )
+
+
+class Comment(models.Model):
+    text = models.TextField('Комментарий')
+    post = models.ForeignKey(
+        Post,
+        on_delete=models.CASCADE,
+        verbose_name='Публикация'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    author = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        verbose_name='Автор'
+    )
+
+    class Meta:
+        verbose_name = 'комментарии'
+        verbose_name_plural = 'Комментарии'
+        ordering = ('created_at',)
+        default_related_name = 'comments'
+
+    def __str__(self):
+        return (
+            f'Комментарий: {self.text[:VISIBLE_LENGTH]}.'
+            f'Публикация:{self.post}'
+        )

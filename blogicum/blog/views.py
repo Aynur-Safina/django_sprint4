@@ -1,10 +1,11 @@
-from blogicum.const import PUBL_COUNT
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.http import Http404
+from django.db.models import Count
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.views.generic import (CreateView, DeleteView, DetailView, ListView,
                                   UpdateView)
+
+from blogicum.const import PUBL_COUNT
 
 from .forms import CommentForm
 from .mixins import (BaseQuerysetMixin, CommentBaseMixin, OnlyAuthorMixin,
@@ -32,8 +33,16 @@ class UserProfileDetailView(BaseQuerysetMixin, ListView):
     def get_queryset(self):
         profile = self.get_object()
         if self.request.user == profile:
-            return Post.objects.filter(
-                author=profile,
+            return (
+                Post.objects.select_related(
+                    'author'
+                ).filter(
+                    author=profile,
+                ).order_by(
+                    '-pub_date'
+                ).annotate(
+                    comment_count=Count('comments')
+                ).all()
             )
         else:
             return BaseQuerysetMixin.get_queryset(
@@ -49,14 +58,10 @@ class UserProfileDetailView(BaseQuerysetMixin, ListView):
         return context
 
 
-class ProfileUpdateView(UrlProfileMixin, UpdateView):
+class ProfileUpdateView(LoginRequiredMixin, UrlProfileMixin, UpdateView):
     """Cтраница для редактирования профиля пользователя."""
 
-    # Атрибуты вернула из миксина в класс,
-    # потому что после переделки UserProfileDetailView,
-    # этот миксин больше никгде не используется кроме данного класса
     model = User
-    content_object_name = 'profile'
     fields = (
         'first_name',
         'last_name',
@@ -65,40 +70,35 @@ class ProfileUpdateView(UrlProfileMixin, UpdateView):
     )
     template_name = 'blog/user.html'
 
-    # Совсем без переопределения этого не удается сделать:
-    # метода страница не рендерится и pytest падает с ошибкой:
-    # " AttributeError: Generic detail view ProfileUpdateView
-    # must be called with either an object pk or a slug in the URLconf."
-    # Насколько я понимаю, раз в url не передается
-    # slug/pk для идентификации пользователя, то приходится
-    # передавать его "вручную", через get_object()
     def get_object(self, queryset=None):
-        if self.request.user.is_authenticated:
-            return self.request.user
-        raise Http404
+        return self.request.user
 
 
-class PostDetailView(PostObjectMixin, DetailView):
+class PostDetailView(PostBaseMixin, DetailView):
     """Страница отдельной публикации."""
 
     template_name = 'blog/detail.html'
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-
+    def get_object(self):
+        self.object = get_object_or_404(
+            Post, pk=self.kwargs['post_id']
+        )
         if self.object.author != self.request.user:
-            self.object = get_object_or_404(
+            return get_object_or_404(
                 Post.objects.filter(
                     pub_date__lt=timezone.now(),
                     is_published=True,
                     category__is_published=True,
                 ),
-                pk=self.kwargs['post_id']
+                pk=self.kwargs['post_id'],
             )
+        return self.object
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
         context['form'] = CommentForm()
         context['comments'] = (
-            self.object.comments.prefetch_related('author')
+            self.object.comments.select_related('author')
         )
         return context
 
@@ -141,7 +141,6 @@ class PostDeleteView(
         context = super().get_context_data(**kwargs)
         form = self.form_class(instance=self.object)
         context['form'] = form
-        context['instance'] = self.object
         return context
 
 
